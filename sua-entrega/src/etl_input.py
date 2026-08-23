@@ -1,3 +1,5 @@
+"""Leitura, validação e normalização dos CSVs recebidos dos CDs."""
+
 from __future__ import annotations
 
 import csv
@@ -20,6 +22,7 @@ from etl_core import (
 
 
 def read_inputs(input_dir: Path, reference_date: date) -> tuple[list[StockRecord], list[Anomaly]]:
+    """Lê todos os CDs e separa registros utilizáveis de anomalias reportáveis."""
     records: list[StockRecord] = []
     anomalies: list[Anomaly] = []
 
@@ -44,6 +47,7 @@ def read_inputs(input_dir: Path, reference_date: date) -> tuple[list[StockRecord
 
                 values = {column: normalize_null(row[column]) for column in REQUIRED_COLUMNS}
                 raw_tuple = tuple(values[column] or "" for column in REQUIRED_COLUMNS)
+                # A deduplicação ocorre antes da conversão para refletir a linha recebida.
                 if raw_tuple in seen_rows:
                     anomalies.append(
                         Anomaly(
@@ -60,6 +64,7 @@ def read_inputs(input_dir: Path, reference_date: date) -> tuple[list[StockRecord
 
                 original_code = values["codigo"]
                 if original_code is None:
+                    # Sem código não há uma chave segura para incluir o registro no produto.
                     anomalies.append(
                         Anomaly(
                             cd,

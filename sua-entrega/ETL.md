@@ -10,6 +10,8 @@ O `etl.py` é o ponto de entrada da consolidação dos arquivos de estoque expor
 - `etl_transform.py`: consolidação, saldos, vendas e cobertura;
 - `etl_output.py`: serialização, validação e publicação atômica das saídas.
 
+Os módulos possuem docstrings e comentários pontuais nas regras menos óbvias, como deduplicação, seleção da descrição canônica, disponibilidade por validade e publicação das saídas.
+
 ## Problemas que ele resolve
 
 - reúne os estoques de Campinas, Belo Horizonte, São Caetano e Londrina em uma única visão;
@@ -19,7 +21,7 @@ O `etl.py` é o ponto de entrada da consolidação dos arquivos de estoque expor
 - evita a soma duplicada de registros idênticos;
 - soma no estoque disponível somente lotes identificados e não vencidos, mas mantém os demais saldos em colunas de controle;
 - separa, sem dupla contagem, os saldos vencidos, com validade pendente e a vencer nas faixas de até 7, 8–30, 31–60 e 61–90 dias;
-- escolhe uma descrição canônica quando o mesmo produto possui descrições diferentes;
+- normaliza todas as descrições para letras maiúsculas, remove hífens e traços, e escolhe uma descrição canônica quando o mesmo produto possui descrições diferentes;
 - calcula a cobertura de estoque em meses usando `saldo total / vendas do mês anterior`;
 - identifica problemas como lote ausente, saldo negativo, produto vencido ou próximo do vencimento, vendas zeradas e formatos divergentes.
 

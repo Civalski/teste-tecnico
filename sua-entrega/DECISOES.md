@@ -58,10 +58,18 @@ Usei a IA como ferramenta complementar para tentar encontrar mais anomalias. Em 
 
 Sobre erros da IA: ela listou os problemas encontrados no `sync_wms.js` e sugeriu que as duas prioridades de refatoração eram a ausência de idempotência e a atribuição no status. Eu discordei dessa decisão porque, na minha visão, um token secreto exposto é prioridade máxima, e a paginação limitada a 1.000 itens poderia extrair apenas uma parte muito pequena dos dados. O problema do retry também é crítico e já havia acontecido segundo o enunciado.
 
-**e) Dívida.**
+**e) Dívida e o que faria com mais uma semana**
 
 ### O que falta
-Existem questões em aberto sobre qual o comportamento padrão para diversas situações relacionadas às anomalias encontradas; as premissas devem ser confirmadas com o time. Também faltam informações que provavelmente estão no banco de dados, mas às quais não tenho acesso. Seria necessário coletar mais informações para confirmar alguns problemas. Por exemplo, o saldo negativo pode ser algum erro de entrada de estoque ou da extração, e esse dado de entrada de estoque não está disponível no teste.
+1 - Corrigir o restante dos problemas encontrados no sync_wms.js - estão listados em REVISAO.md, foram corrigidos apenas 2 problemas.
+
+2 - Possível venda de produto vencido: o lote L2311 de Dipirona consta como vencido no estoque, enquanto houve vendas do produto no mesmo CD. Os dados disponíveis não identificam o lote das saídas, portanto não comprovam a venda do lote vencido. É necessário confirmar no WMS o histórico de movimentações por lote. Enquanto ocorre a investigação, o lote deve permanecer bloqueado e deve ser preparado um plano de devolução ou recolhimento. Caso a venda seja confirmada, acionar os responsáveis e vendedores para contatar os clientes afetados conforme o procedimento sanitário da empresa.
+
+3 - Validar o fluxo com ERP e WMS reais - confirmar paginação, autenticação, timeout, formato das respostas e comportamento de novas tentativas. Os testes locais não comprovam esses contratos em produção.
+
+4 - Criar reconciliação de entrada e saída - comparar quantidade de arquivos/CDs esperados, registros lidos, descartados, duplicados e totais antes/depois da consolidação. Isso ajuda a detectar arquivo incompleto, CD ausente ou extração parcial sem depender apenas das anomalias individuais.
+
+Resumo: existem questões em aberto sobre qual o comportamento padrão para diversas situações relacionadas às anomalias encontradas, as premissas devem ser confirmadas com o time. Também faltam informações que provavelmente estão no banco de dados, mas às quais não tenho acesso. Seria necessário coletar mais informações para confirmar alguns problemas. Por exemplo, o saldo negativo pode ser algum erro de entrada de estoque ou da extração, e esse dado de entrada de estoque não está disponível no teste.
 
 ### O que eu faria com mais uma semana
 1. Definiria uma sprint e classificaria as prioridades para a próxima semana junto com pessoas do time mais engajadas nas demandas.

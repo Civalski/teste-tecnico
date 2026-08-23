@@ -1,3 +1,5 @@
+"""Ponto de entrada e orquestração do pipeline de consolidação de estoque."""
+
 from __future__ import annotations
 
 import argparse
@@ -37,6 +39,7 @@ from etl_transform import (
 
 
 def run(input_dir: Path, output_dir: Path, reference_date: date) -> tuple[int, int]:
+    """Executa todas as etapas e retorna as quantidades publicadas."""
     records, input_anomalies = read_inputs(input_dir, reference_date)
     consolidated_rows, consolidation_anomalies = consolidate(records, reference_date)
     anomalies = input_anomalies + consolidation_anomalies
@@ -45,6 +48,7 @@ def run(input_dir: Path, output_dir: Path, reference_date: date) -> tuple[int, i
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Define a interface de linha de comando e seus caminhos padrão."""
     project_root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description="Consolida exportações de estoque dos quatro CDs.")
     parser.add_argument("--input", type=Path, default=project_root / "dados")
@@ -54,6 +58,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """Converte falhas esperadas do ETL em código de saída para o terminal."""
     args = build_parser().parse_args()
     try:
         products, anomalies = run(args.input, args.output, args.reference_date)

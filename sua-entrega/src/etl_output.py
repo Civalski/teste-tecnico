@@ -1,3 +1,5 @@
+"""Serialização, validação e publicação segura dos CSVs finais."""
+
 from __future__ import annotations
 
 import csv
@@ -17,6 +19,7 @@ ANOMALY_COLUMNS = ("cd", "codigo", "lote", "tipo", "gravidade", "acao_sugerida")
 def serialize_consolidated_rows(
     rows: Iterable[dict[str, str | int | bool]],
 ) -> list[dict[str, str | int | bool]]:
+    """Converte tipos internos para o contrato textual do CSV consolidado."""
     serialized_rows: list[dict[str, str | int | bool]] = []
     for row in rows:
         serialized = dict(row)
@@ -55,6 +58,7 @@ def publish_outputs(
     consolidated_rows: list[dict[str, str | int | bool]],
     anomalies: list[Anomaly],
 ) -> None:
+    """Valida arquivos temporários antes de substituir as duas saídas finais."""
     output_dir.mkdir(parents=True, exist_ok=True)
     temporary_paths: list[Path] = []
     try:
@@ -75,6 +79,7 @@ def publish_outputs(
             _write_csv(temporary_path, columns, rows)
             _validate_csv(temporary_path, columns)
 
+        # A substituição só começa depois que ambos os arquivos foram validados.
         for temporary_path, filename in zip(
             temporary_paths, ("consolidado.csv", "anomalias.csv"), strict=True
         ):

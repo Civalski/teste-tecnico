@@ -1,3 +1,5 @@
+"""Tipos, configurações e regras elementares compartilhadas pelo ETL."""
+
 from __future__ import annotations
 
 import re
@@ -66,6 +68,7 @@ def normalize_null(raw_value: str | None) -> str | None:
 
 
 def parse_brazilian_integer(raw_value: str, field: str, location: str = "") -> int:
+    """Converte um número brasileiro, rejeitando unidades fracionárias."""
     value = raw_value.strip()
     if not NUMBER_PATTERN.fullmatch(value):
         raise ETLError(f"{location}: {field} inválido: {raw_value!r}")
@@ -82,6 +85,7 @@ def parse_brazilian_integer(raw_value: str, field: str, location: str = "") -> i
 
 
 def parse_date(raw_value: str, location: str = "") -> tuple[date, str]:
+    """Aceita os dois formatos de data previstos e informa qual foi usado."""
     value = raw_value.strip()
     for date_format, label in (("%d/%m/%Y", "DD/MM/AAAA"), ("%Y-%m-%d", "AAAA-MM-DD")):
         try:
@@ -124,10 +128,13 @@ def normalize_code(raw_value: str, location: str = "") -> str:
 
 
 def normalize_description(value: str) -> str:
-    return " ".join(value.upper().split())
+    # Traços diferentes representam a mesma separação e não devem criar variantes.
+    without_dashes = re.sub(r"[-‐‑‒–—―]+", " ", value.upper())
+    return " ".join(without_dashes.split())
 
 
 def anomalies_for_record(record: StockRecord, reference_date: date) -> list[Anomaly]:
+    """Aplica alertas que dependem somente de um registro da origem."""
     anomalies: list[Anomaly] = []
     if len(record.codigo_original) < 7:
         anomalies.append(

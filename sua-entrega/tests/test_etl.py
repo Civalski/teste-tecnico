@@ -78,6 +78,13 @@ class ConsolidationTests(unittest.TestCase):
         self.assertFalse(rows[0]["dados_incompletos"])
         self.assertEqual(rows[0]["campos_incompletos"], "")
 
+    def test_description_is_normalized_to_uppercase_without_dashes(self):
+        records = [self.record("Campinas", "protetor solar - fps 50", 10, 20)]
+
+        rows, _ = etl.consolidate(records)
+
+        self.assertEqual(rows[0]["descricao"], "PROTETOR SOLAR FPS 50")
+
     def test_each_nullable_field_marks_product_as_incomplete(self):
         complete = self.record("Campinas", "Produto", 10, 20)
         for field in ("descricao", "lote", "validade", "saldo", "vendas_mes_ant"):
@@ -347,6 +354,13 @@ class RealDataIntegrationTests(unittest.TestCase):
             self.assertEqual(rows["0074500"]["saldo_vencido"], "90")
             self.assertEqual(rows["0074500"]["cobertura_meses"], "0.36")
             self.assertEqual(rows["0074500"]["vendas_mes_ant_total"], "9990")
+            self.assertTrue(
+                all(
+                    row["descricao"] == row["descricao"].upper()
+                    and "-" not in row["descricao"]
+                    for row in rows.values()
+                )
+            )
             self.assertEqual(rows["0067890"]["saldo_londrina"], "-35")
             self.assertEqual(rows["0067890"]["saldo_bh"], "550")
             self.assertEqual(rows["0067890"]["saldo_total"], "515")

@@ -1,3 +1,5 @@
+"""Consolidação dos registros e cálculo dos indicadores de estoque."""
+
 from __future__ import annotations
 
 from collections import Counter, defaultdict
@@ -54,21 +56,20 @@ INTEGER_OUTPUT_COLUMNS = (
 
 
 def choose_description(records: Iterable[StockRecord]) -> str:
+    """Escolhe a descrição normalizada mais frequente, com desempate estável."""
     descriptions = [record.descricao for record in records if record.descricao is not None]
     if not descriptions:
         return ""
     normalized_counts = Counter(normalize_description(value) for value in descriptions)
     winning_key = sorted(normalized_counts, key=lambda key: (-normalized_counts[key], key))[0]
-    representatives = Counter(
-        value for value in descriptions if normalize_description(value) == winning_key
-    )
-    return sorted(representatives, key=lambda value: (-representatives[value], value))[0]
+    return winning_key
 
 
 def consolidate(
     records: list[StockRecord],
     reference_date: date = REFERENCE_DATE,
 ) -> tuple[list[dict[str, str | int | bool]], list[Anomaly]]:
+    """Agrupa por produto e produz saldos, vendas, cobertura e anomalias."""
     grouped: dict[str, list[StockRecord]] = defaultdict(list)
     for record in records:
         grouped[record.codigo].append(record)
@@ -95,6 +96,7 @@ def consolidate(
                 if record.lote is None:
                     balance_without_lot += record.saldo
                 expiry_column = expiry_balance_column(record, reference_date)
+                # Disponível: lote válido hoje ou com vencimento futuro conhecido.
                 if expiry_column is None or expiry_column.startswith("saldo_vence_"):
                     balances[record.cd] += record.saldo
                 if expiry_column is not None:
@@ -104,6 +106,7 @@ def consolidate(
 
         sales_total = 0
         for cd, values in sales_by_cd.items():
+            # Vendas repetidas por lote contam uma vez; divergências não são arbitradas.
             if len(values) != 1:
                 raise ETLError(
                     f"Vendas divergentes para produto {code} no CD {cd}: {sorted(values)}"

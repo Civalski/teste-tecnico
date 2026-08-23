@@ -20,6 +20,7 @@ python -m unittest discover -s sua-entrega/tests -v
 
 ## Consolidação e regras de negócio
 
+- `test_description_is_normalized_to_uppercase_without_dashes`: confirma que descrições são publicadas em letras maiúsculas e sem hífens ou traços. Evita variações apenas de formatação no consolidado.
 - `test_description_sales_and_coverage`: verifica descrição canônica, soma dos saldos, vendas sem duplicação por lote e cálculo da cobertura. Protege os principais números do consolidado.
 - `test_each_nullable_field_marks_product_as_incomplete`: confirma que a ausência de cada campo opcional sinaliza o produto e identifica campo e CD. Torna problemas de qualidade visíveis.
 - `test_one_incomplete_record_marks_whole_product`: garante que um registro incompleto marque o produto consolidado inteiro. Evita que uma ausência seja ocultada pelo agrupamento.
