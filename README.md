@@ -12,7 +12,7 @@ flowchart LR
     B --> C[etl_input.py<br/>leitura e validação]
     C --> D[etl_core.py<br/>normalização e anomalias]
     D --> E[etl_transform.py<br/>consolidação e cobertura]
-    E --> F[etl_output.py<br/>validação e publicação atômica]
+    E --> F[etl_output.py<br/>validação e substituição]
     F --> G[(consolidado.csv)]
     F --> H[(anomalias.csv)]
 
@@ -20,8 +20,9 @@ flowchart LR
 ```
 
 O `etl.py` é o ponto de entrada e a fachada pública. Cada módulo mantém uma etapa
-do processamento isolada, e as saídas somente substituem as versões anteriores
-depois de serem escritas e validadas com sucesso.
+do processamento isolada. Os dois arquivos temporários são escritos e validados
+antes do início das substituições; cada arquivo é trocado de forma atômica, mas
+o par de CSVs não constitui uma transação única do sistema de arquivos.
 
 ## Como executar
 
@@ -41,9 +42,8 @@ Para usar outros diretórios ou outra data de referência:
 python sua-entrega/src/etl.py --input dados --output sua-entrega --reference-date 2026-08-20
 ```
 
-O processo valida schema, números, datas, códigos e consistência das vendas. Em
-caso de erro, encerra com código diferente de zero e não publica conteúdo
-parcialmente processado.
+O processo valida schema, números, datas, códigos e consistência das vendas. Erros
+de entrada encerram a execução com código diferente de zero antes da publicação.
 
 ## Testes
 
@@ -62,6 +62,7 @@ dos arquivos reais. A descrição de cada cenário está em
 - Códigos curtos recebem zeros à esquerda, mas o valor original permanece no relatório de anomalias.
 - Duplicatas idênticas são removidas antes da soma.
 - `vendas_mes_ant` é somada uma vez por produto e CD, não uma vez por lote.
+- Descrições divergentes da variante canônica são mantidas visíveis em `anomalias.csv`.
 - Saldos negativos são preservados e sinalizados para investigação no WMS; o ETL não presume sua causa.
 - O saldo disponível inclui somente lotes identificados e não vencidos. Estoque vencido ou com validade não verificável permanece visível em colunas próprias.
 - Os vencimentos são separados nas faixas de até 7, 8–30, 31–60 e 61–90 dias.
@@ -77,6 +78,7 @@ dos arquivos reais. A descrição de cada cenário está em
 │   ├── tests/              # testes automatizados e sua documentação
 │   ├── consolidado.csv     # visão consolidada por produto
 │   ├── anomalias.csv       # inconsistências técnicas e operacionais
+│   ├── README.md           # instruções rápidas da entrega
 │   ├── DECISOES.md         # perguntas, premissas e decisões da entrega
 │   ├── ETL.md              # documentação detalhada do processamento
 │   └── REVISAO.md          # revisão do script de integração WMS

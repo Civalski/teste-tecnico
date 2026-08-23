@@ -69,7 +69,12 @@ class ConsolidationTests(unittest.TestCase):
             self.record("BH", "Produto alternativo", 5, 20),
         ]
         rows, anomalies = etl.consolidate(records)
-        self.assertEqual(anomalies, [])
+        self.assertEqual(len(anomalies), 1)
+        self.assertEqual(anomalies[0].cd, "BH")
+        self.assertEqual(anomalies[0].codigo, "0000001")
+        self.assertEqual(anomalies[0].lote, "L1")
+        self.assertEqual(anomalies[0].tipo, "Descrição divergente da descrição canônica")
+        self.assertIn("PRODUTO TESTE", anomalies[0].acao_sugerida)
         self.assertEqual(rows[0]["descricao"], "PRODUTO TESTE")
         self.assertEqual(rows[0]["saldo_campinas"], 15)
         self.assertEqual(rows[0]["saldo_total"], 20)
@@ -84,6 +89,25 @@ class ConsolidationTests(unittest.TestCase):
         rows, _ = etl.consolidate(records)
 
         self.assertEqual(rows[0]["descricao"], "PROTETOR SOLAR FPS 50")
+
+    def test_repeated_description_variant_is_reported_once_per_cd(self):
+        records = [
+            self.record("Campinas", "PRODUTO PRINCIPAL", 10, 20),
+            self.record("Campinas", "PRODUTO PRINCIPAL", 5, 20),
+            self.record("Campinas", "PRODUTO PRINCIPAL", 2, 20),
+            self.record("BH", "Produto alternativo", 3, 20),
+            self.record("BH", "Produto alternativo", 4, 20),
+        ]
+
+        _, anomalies = etl.consolidate(records)
+
+        description_anomalies = [
+            anomaly
+            for anomaly in anomalies
+            if anomaly.tipo == "Descrição divergente da descrição canônica"
+        ]
+        self.assertEqual(len(description_anomalies), 1)
+        self.assertEqual(description_anomalies[0].cd, "BH")
 
     def test_each_nullable_field_marks_product_as_incomplete(self):
         complete = self.record("Campinas", "Produto", 10, 20)
@@ -115,7 +139,7 @@ class ConsolidationTests(unittest.TestCase):
     def test_negative_balance_is_preserved_in_consolidation(self):
         records = [
             self.record("Londrina", "Produto", -35, 10),
-            self.record("Campinas", "Produto", 0, 10),
+            self.record("Campinas", "Produto", 1, 10),
             self.record("São Caetano", "Produto", 20, 10),
             self.record("BH", "Produto", 100, 10),
         ]
@@ -125,8 +149,106 @@ class ConsolidationTests(unittest.TestCase):
         self.assertEqual(rows[0]["saldo_londrina"], -35)
         self.assertEqual(rows[0]["saldo_sao_caetano"], 20)
         self.assertEqual(rows[0]["saldo_bh"], 100)
-        self.assertEqual(rows[0]["saldo_total"], 85)
+        self.assertEqual(rows[0]["saldo_total"], 86)
         self.assertEqual(anomalies, [])
+
+    def test_low_coverage_uses_exact_ratio_before_rounding(self):
+        records = [
+            replace(
+                self.record("Campinas", "Produto no limite", 25, 100),
+                codigo="0000001",
+                codigo_original="0000001",
+            ),
+            replace(
+                self.record("Campinas", "Produto abaixo", 24, 100),
+                codigo="0000002",
+                codigo_original="0000002",
+            ),
+            replace(
+                self.record("Campinas", "Produto acima", 25, 99),
+                codigo="0000003",
+                codigo_original="0000003",
+            ),
+        ]
+
+        rows, anomalies = etl.consolidate(records)
+
+        low_coverage = [
+            anomaly
+            for anomaly in anomalies
+            if anomaly.tipo == "Cobertura de estoque igual ou inferior a 0,25 mês"
+        ]
+        self.assertEqual(
+            [anomaly.codigo for anomaly in low_coverage],
+            ["0000001", "0000002"],
+        )
+        self.assertEqual(
+            {row["codigo"]: row["cobertura_meses"] for row in rows},
+            {"0000001": "0.25", "0000002": "0.24", "0000003": "0.25"},
+        )
+
+    def test_zero_available_with_sales_is_reported_only_for_exact_zero(self):
+        records = [
+            replace(
+                self.record("Campinas", "Produto zerado", 0, 10),
+                codigo="0000001",
+                codigo_original="0000001",
+            ),
+            replace(
+                self.record("Campinas", "Produto inativo", 0, 0),
+                codigo="0000002",
+                codigo_original="0000002",
+            ),
+            replace(
+                self.record("Campinas", "Produto negativo", -1, 10),
+                codigo="0000003",
+                codigo_original="0000003",
+            ),
+        ]
+
+        _, anomalies = etl.consolidate(records)
+
+        stockout_anomalies = [
+            anomaly
+            for anomaly in anomalies
+            if anomaly.tipo == "Saldo disponível igual a zero no CD com vendas"
+        ]
+        self.assertEqual(len(stockout_anomalies), 1)
+        self.assertEqual(stockout_anomalies[0].codigo, "0000001")
+        self.assertEqual(stockout_anomalies[0].cd, "Campinas")
+
+    def test_expired_stock_with_sales_is_reported_once_per_product_and_cd(self):
+        reference_date = date(2026, 8, 20)
+        records = [
+            replace(
+                self.record("Campinas", "Produto", 10, 100),
+                lote="V1",
+                validade=date(2026, 8, 19),
+            ),
+            replace(
+                self.record("Campinas", "Produto", 20, 100),
+                lote="V2",
+                validade=date(2026, 8, 18),
+            ),
+            replace(
+                self.record("Campinas", "Produto", 100, 100),
+                lote="A1",
+                validade=date(2027, 1, 1),
+            ),
+        ]
+
+        _, anomalies = etl.consolidate(records, reference_date)
+
+        investigative = [
+            anomaly
+            for anomaly in anomalies
+            if anomaly.tipo == "Estoque vencido no CD com vendas recentes do produto"
+        ]
+        self.assertEqual(len(investigative), 1)
+        self.assertEqual(investigative[0].cd, "Campinas")
+        self.assertEqual(investigative[0].codigo, "0000001")
+        self.assertEqual(investigative[0].lote, "")
+        self.assertIn("não comprovam", investigative[0].acao_sugerida)
 
     def test_negative_balance_generates_operational_options(self):
         record = self.record("Londrina", "Produto", -35, 10)
@@ -289,6 +411,42 @@ class InputValidationTests(unittest.TestCase):
         with self.assertRaises(etl.ETLError):
             etl.read_inputs(self.input_dir, date(2026, 8, 20))
 
+    def test_alternative_date_format_identifies_each_affected_record(self):
+        path = self.input_dir / "estoque_bh.csv"
+        path.write_text(
+            HEADER
+            + "0000001;PRODUTO;L1;2027-12-31;10,00;5,00\n"
+            + "0000002;PRODUTO;L2;2027-11-30;20,00;6,00\n",
+            encoding="utf-8",
+        )
+
+        _, anomalies = etl.read_inputs(self.input_dir, date(2026, 8, 20))
+        date_anomalies = [
+            item
+            for item in anomalies
+            if item.tipo == "Formato de data divergente (AAAA-MM-DD)"
+        ]
+
+        self.assertEqual(
+            [(item.codigo, item.lote) for item in date_anomalies],
+            [("0000001", "L1"), ("0000002", "L2")],
+        )
+
+    def test_short_code_anomaly_uses_normalized_code_and_preserves_original(self):
+        path = self.input_dir / "estoque_bh.csv"
+        path.write_text(
+            HEADER + "74500;PRODUTO;L1;31/12/2027;10,00;50,00\n",
+            encoding="utf-8",
+        )
+
+        _, anomalies = etl.read_inputs(self.input_dir, date(2026, 8, 20))
+
+        short_code = next(
+            item for item in anomalies if item.tipo == "Código com menos de 7 dígitos"
+        )
+        self.assertEqual(short_code.codigo, "0074500")
+        self.assertIn("74500", short_code.acao_sugerida)
+
     def test_null_markers_become_none_and_known_values_are_preserved(self):
         path = self.input_dir / "estoque_bh.csv"
         path.write_text(
@@ -342,12 +500,17 @@ class RealDataIntegrationTests(unittest.TestCase):
                 PROJECT_ROOT / "dados", Path(temp_dir), date(2026, 8, 20)
             )
             self.assertEqual(products, 10)
-            self.assertEqual(anomalies, 14)
+            self.assertEqual(anomalies, 28)
 
             with (Path(temp_dir) / "consolidado.csv").open(
                 encoding="utf-8", newline=""
             ) as source:
                 rows = {row["codigo"]: row for row in csv.DictReader(source, delimiter=";")}
+
+            with (Path(temp_dir) / "anomalias.csv").open(
+                encoding="utf-8", newline=""
+            ) as source:
+                anomaly_rows = list(csv.DictReader(source, delimiter=";"))
 
             self.assertEqual(rows["0074500"]["saldo_bh"], "850")
             self.assertEqual(rows["0074500"]["saldo_total"], "3605")
@@ -372,6 +535,73 @@ class RealDataIntegrationTests(unittest.TestCase):
             self.assertEqual(rows["0102440"]["campos_incompletos"], "lote (Campinas)")
             self.assertEqual(rows["0067890"]["dados_incompletos"], "false")
             self.assertEqual(rows["0067890"]["campos_incompletos"], "")
+            description_anomalies = [
+                row
+                for row in anomaly_rows
+                if row["tipo"] == "Descrição divergente da descrição canônica"
+            ]
+            self.assertEqual(
+                {(row["cd"], row["codigo"]) for row in description_anomalies},
+                {("São Caetano", "0074500"), ("Campinas", "0102440")},
+            )
+            self.assertEqual(
+                {(row["codigo"], row["lote"]) for row in description_anomalies},
+                {("0074500", "L2402"), ("0102440", "")},
+            )
+            date_anomalies = [
+                row
+                for row in anomaly_rows
+                if row["tipo"] == "Formato de data divergente (AAAA-MM-DD)"
+            ]
+            self.assertEqual(
+                {(row["codigo"], row["lote"]) for row in date_anomalies},
+                {
+                    ("0067890", "L2404"),
+                    ("0090012", "L2502"),
+                    ("0074500", "L2401"),
+                    ("0033445", "L2408"),
+                    ("0009910", "L1123"),
+                    ("0125001", "L2411"),
+                },
+            )
+            self.assertTrue(
+                all(
+                    not row["codigo"]
+                    or (len(row["codigo"]) == 7 and row["codigo"].isdigit())
+                    for row in anomaly_rows
+                )
+            )
+            low_coverage = [
+                row
+                for row in anomaly_rows
+                if row["tipo"] == "Cobertura de estoque igual ou inferior a 0,25 mês"
+            ]
+            self.assertEqual(
+                {row["codigo"] for row in low_coverage},
+                {"0033445", "0067890", "0090012", "0102440"},
+            )
+            local_stockouts = [
+                row
+                for row in anomaly_rows
+                if row["tipo"] == "Saldo disponível igual a zero no CD com vendas"
+            ]
+            self.assertEqual(
+                [(row["cd"], row["codigo"], row["lote"]) for row in local_stockouts],
+                [("Campinas", "0102440", "")],
+            )
+            expired_sales = [
+                row
+                for row in anomaly_rows
+                if row["tipo"]
+                == "Estoque vencido no CD com vendas recentes do produto"
+            ]
+            self.assertEqual(
+                {(row["cd"], row["codigo"], row["lote"]) for row in expired_sales},
+                {
+                    ("Campinas", "0074500", ""),
+                    ("São Caetano", "0102440", ""),
+                },
+            )
 
 
 if __name__ == "__main__":

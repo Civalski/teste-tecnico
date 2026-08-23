@@ -3,13 +3,27 @@ Campinas;0074500;L2311;Lote vencido em 30/09/2025;alta;Bloquear o lote e direcio
 Campinas;0102440;;Lote ausente;alta;Corrigir o cadastro e garantir a rastreabilidade antes de movimentar o estoque
 BH;0074500;L2401;Registro duplicado;alta;Investigar a origem da duplicidade e impedir a dupla contagem do saldo
 BH;0033445;L2408;Lote vence entre 8 e 30 dias (31/08/2026);média;Priorizar a expedição ou a transferência do lote antes do vencimento
-São Caetano;74500;L2402;Código com menos de 7 dígitos;média;Normalizar com zeros à esquerda e corrigir a exportação do CD
-São Caetano;102440;L2309;Código com menos de 7 dígitos;média;Normalizar com zeros à esquerda e corrigir a exportação do CD
-São Caetano;102440;L2309;Lote vencido em 31/12/2025;alta;Bloquear o lote e direcioná-lo para segregação e descarte conforme o procedimento operacional
-São Caetano;102440;L2501;Código com menos de 7 dígitos;média;Normalizar com zeros à esquerda e corrigir a exportação do CD
-São Caetano;125001;L2411;Código com menos de 7 dígitos;média;Normalizar com zeros à esquerda e corrigir a exportação do CD
-São Caetano;44120;L2410;Código com menos de 7 dígitos;média;Normalizar com zeros à esquerda e corrigir a exportação do CD
-São Caetano;113005;L2503;Código com menos de 7 dígitos;média;Normalizar com zeros à esquerda e corrigir a exportação do CD
+São Caetano;0074500;L2402;Código com menos de 7 dígitos;média;Código recebido: 74500. Normalizar com zeros à esquerda e corrigir a exportação do CD
+São Caetano;0102440;L2309;Código com menos de 7 dígitos;média;Código recebido: 102440. Normalizar com zeros à esquerda e corrigir a exportação do CD
+São Caetano;0102440;L2309;Lote vencido em 31/12/2025;alta;Bloquear o lote e direcioná-lo para segregação e descarte conforme o procedimento operacional
+São Caetano;0102440;L2501;Código com menos de 7 dígitos;média;Código recebido: 102440. Normalizar com zeros à esquerda e corrigir a exportação do CD
+São Caetano;0125001;L2411;Código com menos de 7 dígitos;média;Código recebido: 125001. Normalizar com zeros à esquerda e corrigir a exportação do CD
+São Caetano;0044120;L2410;Código com menos de 7 dígitos;média;Código recebido: 44120. Normalizar com zeros à esquerda e corrigir a exportação do CD
+São Caetano;0113005;L2503;Código com menos de 7 dígitos;média;Código recebido: 113005. Normalizar com zeros à esquerda e corrigir a exportação do CD
+Londrina;0067890;L2404;Formato de data divergente (AAAA-MM-DD);baixa;Aceitar explicitamente os dois formatos no processamento e padronizar a exportação do CD
 Londrina;0067890;L2404;Saldo negativo (-35);alta;"Verificar possível erro na última entrada de estoque ou falha na extração; se o saldo estiver correto, transferir estoque, dividir em dois envios, aguardar reabastecimento ou cancelar a venda"
+Londrina;0090012;L2502;Formato de data divergente (AAAA-MM-DD);baixa;Aceitar explicitamente os dois formatos no processamento e padronizar a exportação do CD
+Londrina;0074500;L2401;Formato de data divergente (AAAA-MM-DD);baixa;Aceitar explicitamente os dois formatos no processamento e padronizar a exportação do CD
+Londrina;0033445;L2408;Formato de data divergente (AAAA-MM-DD);baixa;Aceitar explicitamente os dois formatos no processamento e padronizar a exportação do CD
 Londrina;0033445;L2408;Lote vence entre 8 e 30 dias (31/08/2026);média;Priorizar a expedição ou a transferência do lote antes do vencimento
-Londrina;;;Formato de data divergente (AAAA-MM-DD);baixa;Aceitar explicitamente os dois formatos no processamento e padronizar a exportação do CD
+Londrina;0009910;L1123;Formato de data divergente (AAAA-MM-DD);baixa;Aceitar explicitamente os dois formatos no processamento e padronizar a exportação do CD
+Londrina;0125001;L2411;Formato de data divergente (AAAA-MM-DD);baixa;Aceitar explicitamente os dois formatos no processamento e padronizar a exportação do CD
+;0033445;;Cobertura de estoque igual ou inferior a 0,25 mês;alta;"Cobertura calculada: 0.23 mês. Avaliar reabastecimento, transferência de estoque ou ajuste do atendimento; nenhuma movimentação é automática"
+;0067890;;Cobertura de estoque igual ou inferior a 0,25 mês;alta;"Cobertura calculada: 0.20 mês. Avaliar reabastecimento, transferência de estoque ou ajuste do atendimento; nenhuma movimentação é automática"
+São Caetano;0074500;L2402;Descrição divergente da descrição canônica;média;"Validar o cadastro no ERP; descrição canônica usada no consolidado: DIPIRONA SODICA 500MG CX 20CP"
+Campinas;0074500;;Estoque vencido no CD com vendas recentes do produto;alta;"Consultar no WMS o histórico de movimentações por lote; as vendas do produto no CD não comprovam a saída do lote vencido"
+;0090012;;Cobertura de estoque igual ou inferior a 0,25 mês;alta;"Cobertura calculada: 0.23 mês. Avaliar reabastecimento, transferência de estoque ou ajuste do atendimento; nenhuma movimentação é automática"
+Campinas;0102440;;Descrição divergente da descrição canônica;média;"Validar o cadastro no ERP; descrição canônica usada no consolidado: PROTETOR SOLAR FPS 50 200ML"
+Campinas;0102440;;Saldo disponível igual a zero no CD com vendas;alta;"Verificar o estoque pendente e decidir entre corrigir a rastreabilidade, reabastecer, transferir estoque ou ajustar o atendimento; o ETL não movimenta saldo automaticamente"
+São Caetano;0102440;;Estoque vencido no CD com vendas recentes do produto;alta;"Consultar no WMS o histórico de movimentações por lote; as vendas do produto no CD não comprovam a saída do lote vencido"
+;0102440;;Cobertura de estoque igual ou inferior a 0,25 mês;alta;"Cobertura calculada: 0.07 mês. Avaliar reabastecimento, transferência de estoque ou ajuste do atendimento; nenhuma movimentação é automática"

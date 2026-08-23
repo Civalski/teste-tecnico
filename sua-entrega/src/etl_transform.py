@@ -28,6 +28,7 @@ EXPIRY_BALANCE_COLUMNS = (
     "saldo_vence_61_a_90_dias",
     "saldo_validade_pendente",
 )
+LOW_COVERAGE_THRESHOLD = Decimal("0.25")
 CONSOLIDATED_COLUMNS = (
     "codigo",
     "descricao",
@@ -78,6 +79,30 @@ def consolidate(
     anomalies: list[Anomaly] = []
     for code in sorted(grouped):
         product_records = grouped[code]
+        canonical_description = choose_description(product_records)
+        reported_description_variants: set[tuple[str, str]] = set()
+        for record in product_records:
+            if record.descricao is None:
+                continue
+            normalized_description = normalize_description(record.descricao)
+            variant_key = (record.cd, normalized_description)
+            if (
+                normalized_description == canonical_description
+                or variant_key in reported_description_variants
+            ):
+                continue
+            reported_description_variants.add(variant_key)
+            anomalies.append(
+                Anomaly(
+                    record.cd,
+                    code,
+                    record.lote or "",
+                    "Descrição divergente da descrição canônica",
+                    "média",
+                    "Validar o cadastro no ERP; descrição canônica usada no consolidado: "
+                    f"{canonical_description}",
+                )
+            )
         incomplete_details = list(
             dict.fromkeys(
                 f"{field} ({record.cd})"
@@ -90,6 +115,7 @@ def consolidate(
         balances = {cd: 0 for cd in CD_FILES}
         balance_without_lot = 0
         expiry_balances = {column: 0 for column in EXPIRY_BALANCE_COLUMNS}
+        expired_balances_by_cd = {cd: 0 for cd in CD_FILES}
         sales_by_cd: dict[str, set[int]] = defaultdict(set)
         for record in product_records:
             if record.saldo is not None:
@@ -101,19 +127,28 @@ def consolidate(
                     balances[record.cd] += record.saldo
                 if expiry_column is not None:
                     expiry_balances[expiry_column] += record.saldo
+                if expiry_column == "saldo_vencido":
+                    expired_balances_by_cd[record.cd] += record.saldo
             if record.vendas_mes_ant is not None:
                 sales_by_cd[record.cd].add(record.vendas_mes_ant)
 
         sales_total = 0
-        for cd, values in sales_by_cd.items():
+        sales_values_by_cd: dict[str, int] = {}
+        for cd in CD_FILES:
+            values = sales_by_cd.get(cd, set())
+            if not values:
+                continue
             # Vendas repetidas por lote contam uma vez; divergências não são arbitradas.
             if len(values) != 1:
                 raise ETLError(
                     f"Vendas divergentes para produto {code} no CD {cd}: {sorted(values)}"
                 )
-            sales_total += next(iter(values))
+            sales_value = next(iter(values))
+            sales_values_by_cd[cd] = sales_value
+            sales_total += sales_value
 
         balance_total = sum(balances.values())
+        coverage_ratio: Decimal | None = None
         if sales_total == 0:
             coverage = ""
             anomalies.append(
@@ -127,14 +162,58 @@ def consolidate(
                 )
             )
         else:
-            coverage_value = (Decimal(balance_total) / Decimal(sales_total)).quantize(
+            coverage_ratio = Decimal(balance_total) / Decimal(sales_total)
+            coverage_value = coverage_ratio.quantize(
                 Decimal("0.01"), rounding=ROUND_HALF_UP
             )
             coverage = format(coverage_value, ".2f")
 
+        for cd in CD_FILES:
+            sales_value = sales_values_by_cd.get(cd)
+            if sales_value is None or sales_value <= 0:
+                continue
+            if balances[cd] == 0:
+                anomalies.append(
+                    Anomaly(
+                        cd,
+                        code,
+                        "",
+                        "Saldo disponível igual a zero no CD com vendas",
+                        "alta",
+                        "Verificar o estoque pendente e decidir entre corrigir a "
+                        "rastreabilidade, reabastecer, transferir estoque ou ajustar o "
+                        "atendimento; o ETL não movimenta saldo automaticamente",
+                    )
+                )
+            if expired_balances_by_cd[cd] > 0:
+                anomalies.append(
+                    Anomaly(
+                        cd,
+                        code,
+                        "",
+                        "Estoque vencido no CD com vendas recentes do produto",
+                        "alta",
+                        "Consultar no WMS o histórico de movimentações por lote; as vendas "
+                        "do produto no CD não comprovam a saída do lote vencido",
+                    )
+                )
+
+        if coverage_ratio is not None and coverage_ratio <= LOW_COVERAGE_THRESHOLD:
+            anomalies.append(
+                Anomaly(
+                    "",
+                    code,
+                    "",
+                    "Cobertura de estoque igual ou inferior a 0,25 mês",
+                    "alta",
+                    f"Cobertura calculada: {coverage} mês. Avaliar reabastecimento, transferência "
+                    "de estoque ou ajuste do atendimento; nenhuma movimentação é automática",
+                )
+            )
+
         row: dict[str, str | int | bool] = {
             "codigo": code,
-            "descricao": choose_description(product_records),
+            "descricao": canonical_description,
         }
         for cd in CD_FILES:
             row[f"saldo_{CD_SLUGS[cd]}"] = balances[cd]

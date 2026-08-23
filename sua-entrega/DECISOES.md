@@ -10,6 +10,8 @@ Este documento registra as perguntas, premissas e decisões adotadas durante a c
 4. Como tratar campos obrigatórios ausentes?
 5. Qual descrição usar quando o mesmo código apresenta descrições diferentes entre CDs?
 
+*Observação:* Não vou fazer perguntas em excesso, embora existam mais ambiguidades, centralizei apenas as perguntas principais que nãao são tão óbvias.
+
 **b) Premissas.**
 
 1. Não existem produtos fracionados; esses campos representam números inteiros apenas, e o decimal só acrescenta ruído.
@@ -47,10 +49,26 @@ Encontrei um saldo negativo no CD de Londrina. Preservei o valor no consolidado 
 ### Formato de data divergente
 Encontrei datas no formato `AAAA-MM-DD` em Londrina, diferente do formato usado nos outros arquivos. Aceitei os dois formatos para não perder registros válidos e normalizei a saída para `DD/MM/AAAA`. Também registrei uma anomalia para que a exportação do CD seja padronizada.
 
-**d) Uso de IA.**
-Usei somente o modelo GPT-5 Sol com low reasoning (na minha opinião, tem o melhor custo-benefício atualmente).
+### Descrições divergentes
+Encontrei descrições diferentes para os mesmos códigos de Dipirona e Protetor Solar entre os CDs. Mantive o código do ERP como identificador do produto, escolhi a descrição normalizada com maior recorrência para o consolidado e registrei as variantes em `anomalias.csv`. Essas diferenças precisam ser validadas no ERP para confirmar qual descrição deve ser usada pelos CDs.
 
-O script `etl.py` foi escrito inteiramente pela IA. Começou como um script simples de correção de erros da tabela, e fui acrescentando novas regras. A ideia é funcionar com mais dados em cenários reais; para evitar *overfitting*, as regras de formatação são gerais e servem para dados além da amostra. A documentação do `etl.py` está em `ETL.md` e foi mantida atualizada conforme as instruções do `AGENTS.md`. Eu não quis montar um harness muito avançado para trabalhar com agentes, pois seria *overengineering*, mas em um cenário real eu teria criado.
+### Baixa cobertura de estoque
+Encontrei quatro produtos com cobertura igual ou inferior a `0,25` mês: Vitamina C, Ibuprofeno, Losartana e Protetor Solar. Calculei o limite usando a razão exata entre saldo disponível e vendas do mês anterior, antes do arredondamento exibido no consolidado. Registrei anomalias de alta gravidade para que a operação avalie reabastecimento, transferência de estoque ou ajuste do atendimento, sem realizar movimentações automaticamente.
+
+### Saldo disponível zerado com vendas
+Encontrei o Protetor Solar com saldo disponível zerado em Campinas e 5.220 vendas no mês anterior. Existem 610 unidades no CD, mas elas estão sem lote e, por isso, permanecem fora do estoque disponível até que a rastreabilidade seja corrigida. Registrei uma anomalia de alta gravidade para que a operação decida entre corrigir o cadastro, reabastecer, transferir estoque ou ajustar o atendimento.
+
+### Estoque vencido com vendas do produto
+Encontrei estoque vencido coexistindo com vendas positivas para a Dipirona em Campinas e para o Protetor Solar em São Caetano. As vendas são informadas por produto e CD, não por lote, portanto esses dados não comprovam que os lotes vencidos foram vendidos. Registrei anomalias investigativas de alta gravidade e mantive o campo de lote vazio nesses alertas, pois é necessário consultar no WMS o histórico de movimentações por lote antes de tomar qualquer decisão.
+
+**d) Uso de IA.**
+*Modelo utilizado:* GPT-5 Sol com low reasoning.
+
+O script `etl.py` foi escrito inteiramente pela IA. Começou como um script simples de correção de erros da tabela, e fui acrescentando novas regras. Depois eu modularizei o código em mais arquivos para facilitar manutenção futura e simular um cenário real, estou ciente de que não era o foco do teste, mas o script estava ficando muito grande. Para evitar overfitting, as regras de formatação são gerais e servem para dados além da amostra. A documentação do `etl.py` está em `ETL.md` e foi mantida atualizada conforme as instruções do `AGENTS.md`. Eu não quis montar um harness muito avançado para trabalhar com agentes, pois seria overengineering, mas em um cenário real eu teria criado.
+
+A IA também foi usada para encontrar erros no sync_wms.js. Boa parte da documentação do `REVISAO.md` foi escrito pela IA, já o `DECISOES.md` foi praticamente 100% escrito manualmente por mim, foram feitas apenas algumas formatações de estrutura para o arquivo .md ficar melhor organizado.
+
+Todos os testes foram gerados por IA, eu apenas orquestrei, pedi a documentação e o motivo de existir cada teste. O ETL.md pode ser ignorado, é apenas um indice para auxiliar o agente a compreender o /src sem gastar tokens lendo o código puro dos arquivos .py.
 
 Tirei muitas dúvidas usando a IA como um assistente de padrões/convenções sobre problemas encontrados.
 
@@ -62,14 +80,11 @@ Sobre erros da IA: ela listou os problemas encontrados no `sync_wms.js` e sugeri
 
 ### O que falta
 1 - Corrigir o restante dos problemas encontrados no sync_wms.js - estão listados em REVISAO.md, foram corrigidos apenas 2 problemas.
-
 2 - Possível venda de produto vencido: o lote L2311 de Dipirona consta como vencido no estoque, enquanto houve vendas do produto no mesmo CD. Os dados disponíveis não identificam o lote das saídas, portanto não comprovam a venda do lote vencido. É necessário confirmar no WMS o histórico de movimentações por lote. Enquanto ocorre a investigação, o lote deve permanecer bloqueado e deve ser preparado um plano de devolução ou recolhimento. Caso a venda seja confirmada, acionar os responsáveis e vendedores para contatar os clientes afetados conforme o procedimento sanitário da empresa.
-
 3 - Validar o fluxo com ERP e WMS reais - confirmar paginação, autenticação, timeout, formato das respostas e comportamento de novas tentativas. Os testes locais não comprovam esses contratos em produção.
-
 4 - Criar reconciliação de entrada e saída - comparar quantidade de arquivos/CDs esperados, registros lidos, descartados, duplicados e totais antes/depois da consolidação. Isso ajuda a detectar arquivo incompleto, CD ausente ou extração parcial sem depender apenas das anomalias individuais.
 
-Resumo: existem questões em aberto sobre qual o comportamento padrão para diversas situações relacionadas às anomalias encontradas, as premissas devem ser confirmadas com o time. Também faltam informações que provavelmente estão no banco de dados, mas às quais não tenho acesso. Seria necessário coletar mais informações para confirmar alguns problemas. Por exemplo, o saldo negativo pode ser algum erro de entrada de estoque ou da extração, e esse dado de entrada de estoque não está disponível no teste.
+*Resumo:* existem questões em aberto sobre qual o comportamento padrão para diversas situações relacionadas às anomalias encontradas, as premissas devem ser confirmadas com o time. Também faltam informações que provavelmente estão no banco de dados, mas às quais não tenho acesso. Seria necessário coletar mais informações para confirmar alguns problemas. Por exemplo, o saldo negativo pode ser algum erro de entrada de estoque ou da extração, e esse dado de entrada de estoque não está disponível no teste.
 
 ### O que eu faria com mais uma semana
 1. Definiria uma sprint e classificaria as prioridades para a próxima semana junto com pessoas do time mais engajadas nas demandas.

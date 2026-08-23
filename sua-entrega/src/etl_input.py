@@ -32,7 +32,6 @@ def read_inputs(input_dir: Path, reference_date: date) -> tuple[list[StockRecord
             raise ETLError(f"Arquivo obrigatório não encontrado: {path}")
 
         seen_rows: set[tuple[str, ...]] = set()
-        date_formats: set[str] = set()
         with path.open("r", encoding="utf-8-sig", newline="") as source:
             reader = csv.DictReader(source, delimiter=";")
             if reader.fieldnames != list(REQUIRED_COLUMNS):
@@ -47,12 +46,18 @@ def read_inputs(input_dir: Path, reference_date: date) -> tuple[list[StockRecord
 
                 values = {column: normalize_null(row[column]) for column in REQUIRED_COLUMNS}
                 raw_tuple = tuple(values[column] or "" for column in REQUIRED_COLUMNS)
+                original_code = values["codigo"]
+                normalized_code = (
+                    normalize_code(original_code, location)
+                    if original_code is not None
+                    else None
+                )
                 # A deduplicação ocorre antes da conversão para refletir a linha recebida.
                 if raw_tuple in seen_rows:
                     anomalies.append(
                         Anomaly(
                             cd,
-                            values["codigo"] or "",
+                            normalized_code or "",
                             values["lote"] or "",
                             "Registro duplicado",
                             "alta",
@@ -62,7 +67,6 @@ def read_inputs(input_dir: Path, reference_date: date) -> tuple[list[StockRecord
                     continue
                 seen_rows.add(raw_tuple)
 
-                original_code = values["codigo"]
                 if original_code is None:
                     # Sem código não há uma chave segura para incluir o registro no produto.
                     anomalies.append(
@@ -81,11 +85,22 @@ def read_inputs(input_dir: Path, reference_date: date) -> tuple[list[StockRecord
                 parsed_date = None
                 if values["validade"] is not None:
                     parsed_date, date_format = parse_date(values["validade"], location)
-                    date_formats.add(date_format)
+                    if date_format == "AAAA-MM-DD":
+                        anomalies.append(
+                            Anomaly(
+                                cd,
+                                normalized_code,
+                                values["lote"] or "",
+                                "Formato de data divergente (AAAA-MM-DD)",
+                                "baixa",
+                                "Aceitar explicitamente os dois formatos no processamento e "
+                                "padronizar a exportação do CD",
+                            )
+                        )
 
                 record = StockRecord(
                     cd=cd,
-                    codigo=normalize_code(original_code, location),
+                    codigo=normalized_code,
                     codigo_original=original_code,
                     descricao=values["descricao"],
                     lote=values["lote"],
@@ -112,7 +127,7 @@ def read_inputs(input_dir: Path, reference_date: date) -> tuple[list[StockRecord
                         anomalies.append(
                             Anomaly(
                                 cd,
-                                original_code,
+                                normalized_code,
                                 values["lote"] or "",
                                 label,
                                 "alta",
@@ -120,18 +135,5 @@ def read_inputs(input_dir: Path, reference_date: date) -> tuple[list[StockRecord
                                 "os valores conhecidos",
                             )
                         )
-
-        if "AAAA-MM-DD" in date_formats:
-            anomalies.append(
-                Anomaly(
-                    cd,
-                    "",
-                    "",
-                    "Formato de data divergente (AAAA-MM-DD)",
-                    "baixa",
-                    "Aceitar explicitamente os dois formatos no processamento e "
-                    "padronizar a exportação do CD",
-                )
-            )
 
     return records, anomalies

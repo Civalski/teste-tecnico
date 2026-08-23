@@ -140,18 +140,19 @@ def anomalies_for_record(record: StockRecord, reference_date: date) -> list[Anom
         anomalies.append(
             Anomaly(
                 record.cd,
-                record.codigo_original,
+                record.codigo,
                 record.lote or "",
                 "Código com menos de 7 dígitos",
                 "média",
-                "Normalizar com zeros à esquerda e corrigir a exportação do CD",
+                f"Código recebido: {record.codigo_original}. Normalizar com zeros à esquerda "
+                "e corrigir a exportação do CD",
             )
         )
     if record.lote is None:
         anomalies.append(
             Anomaly(
                 record.cd,
-                record.codigo_original,
+                record.codigo,
                 "",
                 "Lote ausente",
                 "alta",
@@ -162,7 +163,7 @@ def anomalies_for_record(record: StockRecord, reference_date: date) -> list[Anom
         anomalies.append(
             Anomaly(
                 record.cd,
-                record.codigo_original,
+                record.codigo,
                 record.lote or "",
                 f"Saldo negativo ({record.saldo})",
                 "alta",
@@ -180,7 +181,7 @@ def anomalies_for_record(record: StockRecord, reference_date: date) -> list[Anom
         anomalies.append(
             Anomaly(
                 record.cd,
-                record.codigo_original,
+                record.codigo,
                 record.lote or "",
                 f"Lote vencido em {formatted_date}",
                 "alta",
@@ -192,7 +193,7 @@ def anomalies_for_record(record: StockRecord, reference_date: date) -> list[Anom
         anomalies.append(
             Anomaly(
                 record.cd,
-                record.codigo_original,
+                record.codigo,
                 record.lote or "",
                 f"Lote vence em até 7 dias ({formatted_date})",
                 "alta",
@@ -203,7 +204,7 @@ def anomalies_for_record(record: StockRecord, reference_date: date) -> list[Anom
         anomalies.append(
             Anomaly(
                 record.cd,
-                record.codigo_original,
+                record.codigo,
                 record.lote or "",
                 f"Lote vence entre 8 e 30 dias ({formatted_date})",
                 "média",
@@ -214,7 +215,7 @@ def anomalies_for_record(record: StockRecord, reference_date: date) -> list[Anom
         anomalies.append(
             Anomaly(
                 record.cd,
-                record.codigo_original,
+                record.codigo,
                 record.lote or "",
                 f"Lote vence entre 31 e 60 dias ({formatted_date})",
                 "média",
@@ -225,7 +226,7 @@ def anomalies_for_record(record: StockRecord, reference_date: date) -> list[Anom
         anomalies.append(
             Anomaly(
                 record.cd,
-                record.codigo_original,
+                record.codigo,
                 record.lote or "",
                 f"Lote vence entre 61 e 90 dias ({formatted_date})",
                 "baixa",
