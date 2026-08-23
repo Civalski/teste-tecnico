@@ -1,6 +1,14 @@
 # Documentação do `etl.py`
 
-O `etl.py` automatiza a consolidação dos arquivos de estoque exportados pelos quatro centros de distribuição. Ele substitui o trabalho manual de reunir planilhas, padronizar dados e calcular os totais por produto.
+O `etl.py` é o ponto de entrada da consolidação dos arquivos de estoque exportados pelos quatro centros de distribuição. Ele mantém a execução em um único comando e delega as etapas do processamento a módulos especializados.
+
+## Estrutura do código
+
+- `etl.py`: fachada compatível, argumentos de linha de comando e orquestração;
+- `etl_core.py`: tipos, configurações compartilhadas, normalização e regras de anomalias por registro;
+- `etl_input.py`: leitura e validação dos CSVs de entrada;
+- `etl_transform.py`: consolidação, saldos, vendas e cobertura;
+- `etl_output.py`: serialização, validação e publicação atômica das saídas.
 
 ## Problemas que ele resolve
 
@@ -18,8 +26,6 @@ O `etl.py` automatiza a consolidação dos arquivos de estoque exportados pelos 
 ## Como funciona
 
 O processamento segue três etapas:
-
-Esses blocos principais também estão sinalizados por comentários no código para facilitar a leitura e a manutenção.
 
 1. **Extração e validação:** lê os quatro CSVs, confere o schema e valida códigos, datas e valores numéricos. Datas válidas são mantidas como `datetime.date` durante o processamento. `saldo` e `vendas_mes_ant` podem usar separador de milhar e terminar em `,00`, mas devem representar unidades inteiras; valores realmente fracionários são rejeitados. Ausências viram `None` e geram anomalias, sem serem presumidas como zero. Um registro sem código não pode ser associado a um produto e aparece somente nas anomalias.
 2. **Transformação e consolidação:** agrupa os registros por produto, classifica cada saldo em uma única faixa de validade, soma por CD somente os lotes disponíveis, consolida as vendas e calcula a cobertura sobre o saldo disponível.
