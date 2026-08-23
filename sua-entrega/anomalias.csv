@@ -1,0 +1,15 @@
+cd;codigo;lote;tipo;gravidade;acao_sugerida
+Campinas;0074500;L2311;Lote vencido em 30/09/2025;alta;Bloquear o lote e direcioná-lo para segregação e descarte conforme o procedimento operacional
+Campinas;0102440;;Lote ausente;alta;Corrigir o cadastro e garantir a rastreabilidade antes de movimentar o estoque
+BH;0074500;L2401;Registro duplicado;alta;Investigar a origem da duplicidade e impedir a dupla contagem do saldo
+BH;0033445;L2408;Lote vence entre 8 e 30 dias (31/08/2026);média;Priorizar a expedição ou a transferência do lote antes do vencimento
+São Caetano;74500;L2402;Código com menos de 7 dígitos;média;Normalizar com zeros à esquerda e corrigir a exportação do CD
+São Caetano;102440;L2309;Código com menos de 7 dígitos;média;Normalizar com zeros à esquerda e corrigir a exportação do CD
+São Caetano;102440;L2309;Lote vencido em 31/12/2025;alta;Bloquear o lote e direcioná-lo para segregação e descarte conforme o procedimento operacional
+São Caetano;102440;L2501;Código com menos de 7 dígitos;média;Normalizar com zeros à esquerda e corrigir a exportação do CD
+São Caetano;125001;L2411;Código com menos de 7 dígitos;média;Normalizar com zeros à esquerda e corrigir a exportação do CD
+São Caetano;44120;L2410;Código com menos de 7 dígitos;média;Normalizar com zeros à esquerda e corrigir a exportação do CD
+São Caetano;113005;L2503;Código com menos de 7 dígitos;média;Normalizar com zeros à esquerda e corrigir a exportação do CD
+Londrina;0067890;L2404;Saldo negativo (-35);alta;"Verificar possível erro na última entrada de estoque ou falha na extração; se o saldo estiver correto, transferir estoque, dividir em dois envios, aguardar reabastecimento ou cancelar a venda"
+Londrina;0033445;L2408;Lote vence entre 8 e 30 dias (31/08/2026);média;Priorizar a expedição ou a transferência do lote antes do vencimento
+Londrina;;;Formato de data divergente (AAAA-MM-DD);baixa;Aceitar explicitamente os dois formatos no processamento e padronizar a exportação do CD

@@ -1,0 +1,11 @@
+codigo;descricao;saldo_campinas;saldo_bh;saldo_sao_caetano;saldo_londrina;saldo_total;saldo_sem_lote;saldo_vencido;saldo_vence_ate_7_dias;saldo_vence_8_a_30_dias;saldo_vence_31_a_60_dias;saldo_vence_61_a_90_dias;saldo_validade_pendente;vendas_mes_ant_total;cobertura_meses;dados_incompletos;campos_incompletos
+0009910;SHAMPOO ANTICASPA 400ML;0;340;0;260;600;0;0;0;0;0;0;0;1800;0.33;false;
+0033445;VITAMINA C 1G EFERVESCENTE 10CP;0;155;0;88;243;0;0;0;243;0;0;0;1050;0.23;false;
+0044120;CREME HIDRATANTE CORPORAL 400G;275;0;1020;0;1295;0;0;0;0;0;0;0;3470;0.37;false;
+0067890;IBUPROFENO 600MG CX 20CP;0;550;0;-35;515;0;0;0;0;0;0;0;2640;0.20;false;
+0074500;DIPIRONA SODICA 500MG CX 20CP;1730;850;300;725;3605;0;90;0;0;0;0;0;9990;0.36;false;
+0081230;AMOXICILINA 500MG CX 21CP;470;0;0;0;470;0;0;0;0;0;0;0;1180;0.40;false;
+0090012;LOSARTANA 50MG CX 30CP;0;980;0;415;1395;0;0;0;0;0;0;0;5950;0.23;false;
+0102440;Protetor Solar FPS 50 - 200ML;0;0;520;0;520;610;45;0;0;0;0;610;7960;0.07;true;lote (Campinas)
+0113005;OMEPRAZOL 20MG CX 28CP;3500;0;760;0;4260;0;0;0;0;0;0;0;11050;0.39;false;
+0125001;CONDICIONADOR NUTRITIVO 400ML;0;0;890;130;1020;0;0;0;0;0;0;0;3760;0.27;false;
